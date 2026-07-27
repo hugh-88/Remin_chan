@@ -48,13 +48,14 @@ def set_reminder(update, context):
         message_text = " ".join(context.args[1:])
 
         if not message_text:
-            update.message.reply_text("Cú pháp: `/remind HH:MM Nội dung`")
+            update.message.reply_text(
+                "❌ Cú pháp: `/remind HH:MM Nội dung`\n*Ví dụ:* `/remind 14:30 Uống nước`", parse_mode=ParseMode.MARKDOWN)
             return
 
         hour, minute = map(int, time_str.split(':'))
         job_id = f"job_{job_counter}"
 
-        # Thêm lịch và truyền user_chat_id vào hàm send_message
+        # Thêm lịch hẹn giờ cho đúng người vừa nhắn tin
         scheduler.add_job(
             send_message_to_user,
             'cron',
@@ -62,19 +63,6 @@ def set_reminder(update, context):
             minute=minute,
             args=[context.bot, user_chat_id, f"⏰ *Nhắc nhở:* {message_text}"],
             id=job_id,
-            name=f"{time_str} - {message_text}"
-        )
-        # ... (các phần còn lại giữ nguyên)
-
-        # Thêm công việc vào bộ lập lịch với ID riêng
-        scheduler.add_job(
-            send_message,
-            'cron',
-            hour=hour,
-            minute=minute,
-            args=[context.bot, f"⏰ *Nhắc nhở:* {message_text}"],
-            id=job_id,
-            # Lưu tên công việc để hiển thị ở /list
             name=f"{time_str} - {message_text}"
         )
 
@@ -86,24 +74,31 @@ def set_reminder(update, context):
             parse_mode=ParseMode.MARKDOWN
         )
         job_counter += 1
-    except Exception:
+    except Exception as e:
+        logging.error(f"Lỗi đặt lịch: {e}")
         update.message.reply_text(
             "❌ Sai cú pháp! Ví dụ đúng: `/remind 14:30 Uống nước`", parse_mode=ParseMode.MARKDOWN)
 
-# Lệnh /list (Xem danh sách nhắc nhở)
+# Lệnh /list (Xem danh sách nhắc nhở của chính người dùng)
 
 
 def list_reminders(update, context):
+    user_chat_id = update.effective_chat.id
     jobs = scheduler.get_jobs()
 
-    if not jobs:
+    user_jobs = []
+    for job in jobs:
+        # Lọc ra các công việc gửi tới user_chat_id hiện tại
+        if len(job.args) >= 2 and job.args[1] == user_chat_id:
+            user_jobs.append(job)
+
+    if not user_jobs:
         update.message.reply_text(
             "📭 Hiện tại bạn chưa cài đặt lịch nhắc nhở nào!")
         return
 
-    msg = "📋 *DANH SÁCH LỊCH NHẮC NHỞ:* \n\n"
-    for job in jobs:
-        # Lấy ID dạng số từ string job_id (job_1 -> 1)
+    msg = "📋 *DANH SÁCH LỊCH NHẮC NHỞ CỦA BẠN:* \n\n"
+    for job in user_jobs:
         if job.id.startswith("job_"):
             clean_id = job.id.replace("job_", "")
             msg += f"🔹 *ID:* `{clean_id}` | ⏰ {job.name}\n"
@@ -143,14 +138,6 @@ def main():
     dp.add_handler(CommandHandler("remind", set_reminder))
     dp.add_handler(CommandHandler("list", list_reminders))
     dp.add_handler(CommandHandler("del", delete_reminder))
-
-    # Các lịch cố định mặc định (Không mang ID động nên sẽ không bị xoá nhầm qua lệnh /del)
-    scheduler.add_job(send_message_to_user, 'cron', hour=6, minute=0, args=[
-        updater.bot, CHAT_ID, "☀️ *Dậy thôi bạn ơi!* Chúc bạn ngày mới tốt lành."], name="06:00 - Dậy sớm")
-    scheduler.add_job(send_message_to_user, 'cron', hour=7, minute=30, args=[
-        updater.bot, CHAT_ID, "📚 *Đến giờ đi học/đi làm rồi!*"], name="07:30 - Học bài")
-    scheduler.add_job(send_message_to_user, 'cron', hour=0, minute=0, args=[
-        updater.bot, CHAT_ID, "🌙 *Đến giờ đi ngủ rồi!* Cất điện thoại nghỉ ngơi thôi."], name="00:00 - Đi ngủ")
 
     scheduler.start()
 
