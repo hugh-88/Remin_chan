@@ -146,11 +146,11 @@ def main():
 
     # Các lịch cố định mặc định (Không mang ID động nên sẽ không bị xoá nhầm qua lệnh /del)
     scheduler.add_job(send_message_to_user, 'cron', hour=6, minute=0, args=[
-                      updater.bot, "☀️ *Dậy thôi bạn ơi!* Chúc bạn ngày mới tốt lành."], name="06:00 - Dậy sớm")
-    scheduler.add_job(ssend_message_to_user, 'cron', hour=7, minute=30, args=[
-                      updater.bot, "📚 *Đến giờ đi học/đi làm rồi!*"], name="07:30 - Học bài")
+        updater.bot, CHAT_ID, "☀️ *Dậy thôi bạn ơi!* Chúc bạn ngày mới tốt lành."], name="06:00 - Dậy sớm")
+    scheduler.add_job(send_message_to_user, 'cron', hour=7, minute=30, args=[
+        updater.bot, CHAT_ID, "📚 *Đến giờ đi học/đi làm rồi!*"], name="07:30 - Học bài")
     scheduler.add_job(send_message_to_user, 'cron', hour=0, minute=0, args=[
-                      updater.bot, "🌙 *Đến giờ đi ngủ rồi!* Cất điện thoại nghỉ ngơi thôi."], name="00:00 - Đi ngủ")
+        updater.bot, CHAT_ID, "🌙 *Đến giờ đi ngủ rồi!* Cất điện thoại nghỉ ngơi thôi."], name="00:00 - Đi ngủ")
 
     scheduler.start()
 
